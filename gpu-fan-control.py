@@ -8,6 +8,7 @@ FAN_BASE_PATH = '/sys/class/hwmon/hwmon1'
 GPU_FAN_ENABLE = f'{FAN_BASE_PATH}/pwm3_enable'
 GPU_FAN_SPEED_CONTROL = f'{FAN_BASE_PATH}/pwm3'
 UPDATE_INTERVAL_MS = 1000
+AVERAGE_SAMPLE_COUNT = 3
 
 FAN_CURVE = (
     (40, 10),
@@ -35,8 +36,17 @@ def interpolate(temp, last_less, first_greater):
     return location * (first_greater[1] - last_less[1]) + last_less[1]
 
 
+last_gpu_temps = []
+
+
 def get_speed_for_current_gpu_temp():
     temp = get_gpu_temp()
+    global last_gpu_temps
+    last_gpu_temps.append(temp)
+    if len(last_gpu_temps) > AVERAGE_SAMPLE_COUNT:
+        last_gpu_temps = last_gpu_temps[-AVERAGE_SAMPLE_COUNT:]
+
+    temp = sum(last_gpu_temps) / len(last_gpu_temps)
 
     if temp < FAN_CURVE[0][0]:
         return FAN_CURVE[0][1]
